@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Chess Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"
+            integrity="sha512-xRllwz2gdZciIB+AkEbeq+gVhX8VB8XsfqeFbUh+SzHlN96dEduwtTuVuc2u9EROlmW9+yhRlxjif66ORpsgVA=="
+            crossOrigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script type="module">
+
+    import { Chess } from 'https://unpkg.com/chess.js@0.13.4/chess.js';
+
+    tailwind.config = {
+    theme: {
+    extend: {
+    colors: {
+    'glass': 'rgba(255, 255, 255, 0.1)',
+                        'glass-dark': 'rgba(0, 0, 0, 0.1)',
+                        'board-light': '#f0d9b5',
+                        'board-dark': '#b58863'
+                    },
+                    backdropBlur: {
+                        'xs': '2px',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .chess-piece {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
+            width: 80%;
+            height: 80%;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+        
+        .chess-square {
+            transition: all 0.2s ease;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        
+        .selected {
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.3) 0%, rgba(59, 130, 246, 0.1) 70%);
+            box-shadow: inset 0 0 20px rgba(59, 130, 246, 0.3);
+        }
+        
+        .valid-move {
+            position: relative;
+        }
+        
+        .valid-move::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+            background-color: rgba(0, 0, 0, 0.6);
+            border-radius: 50%;
+            z-index: 10;
+        }
+        
+        .king-in-check {
+            background: radial-gradient(circle, rgba(239, 68, 68, 0.3) 0%, rgba(239, 68, 68, 0.1) 70%);
+            box-shadow: inset 0 0 20px rgba(239, 68, 68, 0.3);
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .glass-effect-dark {
+            background: rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Disable right-click context menu on chess board */
+        .grid {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        /* Chess.com Individual Piece URLs */
+        .piece-white-king { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wk.png'); }
+        .piece-white-queen { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wq.png'); }
+        .piece-white-rook { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wr.png'); }
+        .piece-white-bishop { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wb.png'); }
+        .piece-white-knight { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wn.png'); }
+        .piece-white-pawn { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wp.png'); }
+        
+        .piece-black-king { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/neo/150/bk.png'); }
+        .piece-black-queen { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/neo/150/bq.png'); }
+        .piece-black-rook { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/neo/150/br.png'); }
+        .piece-black-bishop { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/neo/150/bb.png'); }
+        .piece-black-knight { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/neo/150/bn.png'); }
+        .piece-black-pawn { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/neo/150/bp.png'); }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
+    <div class="fade-in w-full max-w-6xl">
+        <!-- Game Container -->
+        <div class="flex flex-col lg:flex-row gap-6 items-center lg:items-start">
+            <!-- Chess Board -->
+            <div class="glass-effect rounded-2xl p-3">
+                <div class="grid grid-cols-8 w-96 h-96 lg:w-[34rem] lg:h-[34rem] xl:w-[38rem] xl:h-[38rem] 2xl:w-[42rem] 2xl:h-[42rem] rounded-xl overflow-hidden shadow-2xl">
+                    <!-- Chess squares will be generated here -->
+                </div>
+            </div>
+
+            <!-- Game Info Panel -->
+            <div class="glass-effect rounded-2xl p-6 w-full lg:w-80">
+                <div class="space-y-4">
+                    <div class="text-center">
+                        <h3 class="text-xl font-semibold text-white mb-2">Game Status</h3>
+                        <div id="gameStatus" class="text-green-400 font-medium">White's Turn</div>
+                    </div>
+                    
+                    <div class="pt-4 border-t border-gray-600">
+                        <div class="space-y-2">
+                            <h4 class="text-sm font-medium text-gray-300">Game Info</h4>
+                            <div id="checkInfo" class="text-xs text-gray-400 hidden">
+                                <div class="flex items-center space-x-2">
+                                    <div class="w-2 h-2 bg-red-400 rounded-full"></div>
+                                    <span>King in Check</span>
+                                </div>
+                            </div>
+                            <div id="moveInfo" class="text-xs text-gray-400">
+                                <span>Last Move: </span><span id="lastMove">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-4 border-t border-gray-600">
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Game Mode</label>
+                                <select id="gameMode" class="w-full bg-gray-800 text-white rounded-lg px-3 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none">
+                                    <option value="human">Human vs Human</option>
+                                    <option value="bot">Human vs Bot</option>
+                                </select>
+                            </div>
+                            <div id="botControls" class="hidden">
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Bot Difficulty</label>
+                                <select id="botDifficulty" class="w-full bg-gray-800 text-white rounded-lg px-3 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none">
+                                    <option value="1">Easy</option>
+                                    <option value="3">Medium</option>
+                                    <option value="5">Hard</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="pt-4 border-t border-gray-600">
+                        <button id="resetBtn" class="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium py-3 px-4 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg">
+                            Reset Game
+                        </button>
+                    </div>
+                    
+                    <div class="text-xs text-gray-400 text-center">
+                        <p>Click on pieces to move them</p>
+                        <p>Valid moves will be highlighted</p>
+                        <p id="botInfo" class="hidden mt-2">Playing against AI bot</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pawn Promotion Modal -->
+    <div id="promotionModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="glass-effect rounded-2xl p-6 max-w-sm w-full mx-4">
+            <h3 class="text-xl font-semibold text-white mb-4 text-center">Choose Promotion</h3>
+            <div class="grid grid-cols-4 gap-3">
+                <button class="promotion-piece bg-white rounded-lg p-3 hover:bg-gray-100 transition-colors" data-piece="q">
+                    <div class="piece-white-queen w-full h-12 bg-contain bg-center bg-no-repeat"></div>
+                </button>
+                <button class="promotion-piece bg-white rounded-lg p-3 hover:bg-gray-100 transition-colors" data-piece="r">
+                    <div class="piece-white-rook w-full h-12 bg-contain bg-center bg-no-repeat"></div>
+                </button>
+                <button class="promotion-piece bg-white rounded-lg p-3 hover:bg-gray-100 transition-colors" data-piece="b">
+                    <div class="piece-white-bishop w-full h-12 bg-contain bg-center bg-no-repeat"></div>
+                </button>
+                <button class="promotion-piece bg-white rounded-lg p-3 hover:bg-gray-100 transition-colors" data-piece="n">
+                    <div class="piece-white-knight w-full h-12 bg-contain bg-center bg-no-repeat"></div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PGN Modal -->
+    <div id="pgnModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="glass-effect rounded-2xl p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+            <h3 class="text-xl font-semibold text-white mb-4 text-center">Game PGN</h3>
+            <div class="bg-gray-800 rounded-lg p-4 mb-4">
+                <pre id="pgnText" class="text-green-400 text-sm whitespace-pre-wrap font-mono"></pre>
+            </div>
+            <div class="flex justify-center space-x-3">
+                <button id="copyPgnBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors">
+                    Copy PGN
+                </button>
+                <button id="closePgnBtn" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { Chess } from 'https://unpkg.com/chess.js@0.13.4/chess.js';
+        
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'glass': 'rgba(255, 255, 255, 0.1)',
+                        'glass-dark': 'rgba(0, 0, 0, 0.1)',
+                        'board-light': '#f0d9b5',
+                        'board-dark': '#b58863'
+                    },
+                    backdropBlur: {
+                        'xs': '2px',
+                    }
+                }
+            }
+        }
+
+        // Chess game implementation with chess.js
+        class ChessGame {
+            constructor() {
+                this.chess = new Chess();
+                // console.log('Chess object:', this.chess);
+                // console.log('Chess board:', this.chess.board());
+                // console.log('Chess fen:', this.chess.fen());
+                // console.log('Is chess.js working?', typeof this.chess.get === 'function');
+                this.selectedPiece = null;
+                this.gameMode = 'human';
+                this.botDifficulty = 3;
+                this.gameStatus = document.getElementById('gameStatus');
+                this.resetBtn = document.getElementById('resetBtn');
+                this.gameModeSelect = document.getElementById('gameMode');
+                this.botDifficultySelect = document.getElementById('botDifficulty');
+                this.botControls = document.getElementById('botControls');
+                this.botInfo = document.getElementById('botInfo');
+                this.promotionModal = document.getElementById('promotionModal');
+                this.pendingPromotion = null;
+                this.pgnModal = document.getElementById('pgnModal');
+                this.pgnText = document.getElementById('pgnText');
+                this.copyPgnBtn = document.getElementById('copyPgnBtn');
+                this.closePgnBtn = document.getElementById('closePgnBtn');
+                
+                this.loadGameState();
+                this.setupEventListeners();
+                this.syncUIWithGameState();
+                this.renderBoard();
+                this.updateGameStatus();
+            }
+
+            saveGameState() {
+                const gameState = {
+                    fen: this.chess.fen(),
+                    gameMode: this.gameMode,
+                    botDifficulty: this.botDifficulty,
+                    timestamp: Date.now()
+                };
+                localStorage.setItem('chessGameState', JSON.stringify(gameState));
+            }
+
+            loadGameState() {
+                const savedState = localStorage.getItem('chessGameState');
+                if (savedState) {
+                    try {
+                        const gameState = JSON.parse(savedState);
+                        
+                        // Load game position
+                        if (gameState.fen) {
+                            this.chess = new Chess(gameState.fen);
+                        }
+                        
+                        // Load game mode
+                        if (gameState.gameMode) {
+                            this.gameMode = gameState.gameMode;
+                            // Update UI elements
+                            this.gameModeSelect.value = this.gameMode;
+                            this.botControls.classList.toggle('hidden', this.gameMode !== 'bot');
+                            this.botInfo.classList.toggle('hidden', this.gameMode !== 'bot');
+                            // console.log('Game mode loaded:', this.gameMode);
+                        }
+                        
+                        // Load bot difficulty
+                        if (gameState.botDifficulty) {
+                            this.botDifficulty = gameState.botDifficulty;
+                            this.botDifficultySelect.value = this.botDifficulty;
+                            // console.log('Bot difficulty loaded:', this.botDifficulty);
+                        }
+                        
+                        // console.log('Game state loaded from localStorage');
+                    } catch (error) {
+                        // console.error('Error loading game state:', error);
+                        localStorage.removeItem('chessGameState');
+                    }
+                }
+            }
+
+            syncUIWithGameState() {
+                // Ensure UI reflects current game state
+                this.gameModeSelect.value = this.gameMode;
+                this.botDifficultySelect.value = this.botDifficulty;
+                this.botControls.classList.toggle('hidden', this.gameMode !== 'bot');
+                this.botInfo.classList.toggle('hidden', this.gameMode !== 'bot');
+            }
+
+            getPieceSymbol(piece) {
+                // Map chess.js piece types to CSS class names
+                const typeMap = {
+                    'p': 'pawn',
+                    'n': 'knight', 
+                    'b': 'bishop',
+                    'r': 'rook',
+                    'q': 'queen',
+                    'k': 'king'
+                };
+                
+                // Map chess.js color codes to full color names
+                const colorMap = {
+                    'w': 'white',
+                    'b': 'black'
+                };
+                
+                const pieceType = typeMap[piece.type] || piece.type;
+                const pieceColor = colorMap[piece.color] || piece.color;
+                return `piece-${pieceColor}-${pieceType}`;
+            }
+
+            findKingPosition(color) {
+                for (let row = 0; row < 8; row++) {
+                    for (let col = 0; col < 8; col++) {
+                        const square = String.fromCharCode(97 + col) + (8 - row);
+                        const piece = this.chess.get(square);
+                        if (piece && piece.type === 'k' && piece.color === color) {
+                            return square;
+                        }
+                    }
+                }
+                return null;
+            }
+
+            highlightKingInCheck() {
+                // Remove previous check highlights
+                document.querySelectorAll('.chess-square').forEach(sq => {
+                    sq.classList.remove('king-in-check');
+                });
+
+                // Check if current player's king is in check
+                if (this.chess.in_check()) {
+                    const currentColor = this.chess.turn();
+                    const kingSquare = this.findKingPosition(currentColor);
+                    if (kingSquare) {
+                        const kingElement = document.querySelector(`[data-square="${kingSquare}"]`);
+                        if (kingElement) {
+                            kingElement.classList.add('king-in-check');
+                        }
+                    }
+                }
+            }
+
+            renderBoard() {
+                const boardContainer = document.querySelector('.grid');
+                boardContainer.innerHTML = '';
+
+                for (let row = 0; row < 8; row++) {
+                    for (let col = 0; col < 8; col++) {
+                        const square = document.createElement('div');
+                        const isLight = (row + col) % 2 === 0;
+                        const squareName = String.fromCharCode(97 + col) + (8 - row);
+                        
+                        square.className = `chess-square w-full h-full flex items-center justify-center cursor-pointer aspect-square ${
+                            isLight ? 'bg-board-light' : 'bg-board-dark'
+                        }`;
+                        
+                        square.dataset.square = squareName;
+
+                        const piece = this.chess.get(squareName);
+                        if (piece) {
+                            const pieceElement = document.createElement('div');
+                            const pieceClass = this.getPieceSymbol(piece);
+                            pieceElement.className = `chess-piece ${pieceClass}`;
+                            square.appendChild(pieceElement);
+                        }
+
+                        boardContainer.appendChild(square);
+                    }
+                }
+                
+                // Highlight king in check after board is rendered
+                this.highlightKingInCheck();
+            }
+
+            getValidMoves(square) {
+                return this.chess.moves({ square: square, verbose: true });
+            }
+
+            makeMove(fromSquare, toSquare, promotion = null) {
+                const move = {
+                    from: fromSquare,
+                    to: toSquare,
+                    promotion: promotion
+                };
+
+                const result = this.chess.move(move);
+                
+                if (result) {
+                    // console.log('Move successful, playing sound...');
+                    this.playMoveSound();
+                    this.renderBoard();
+                    this.updateGameStatus();
+                    this.saveGameState();
+                    
+                    // Check if game is over
+                    if (this.chess.game_over()) {
+                        this.handleGameOver();
+                        return;
+                    }
+
+                    // Bot's turn
+                    if (this.gameMode === 'bot' && this.chess.turn() === 'b') {
+                        setTimeout(() => this.makeBotMove(), 500);
+                    }
+                }
+                
+                return result;
+            }
+
+            handlePawnPromotion(fromSquare, toSquare) {
+                const piece = this.chess.get(fromSquare);
+                if (piece && piece.type === 'p') {
+                    const targetRank = toSquare.charAt(1);
+                    const isPromotion = (piece.color === 'w' && targetRank === '8') || 
+                                       (piece.color === 'b' && targetRank === '1');
+                    
+                    // console.log('Pawn promotion check:', {
+                    //     piece: piece,
+                    //     targetRank: targetRank,
+                    //     isPromotion: isPromotion,
+                    //     fromSquare: fromSquare,
+                    //     toSquare: toSquare
+                    // });
+                    
+                    if (isPromotion) {
+                        this.pendingPromotion = { from: fromSquare, to: toSquare };
+                        this.showPromotionModal(piece.color);
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            showPromotionModal(color) {
+                const modal = this.promotionModal;
+                const pieces = modal.querySelectorAll('.promotion-piece div');
+                
+                // Update piece colors based on the promoting player
+                pieces.forEach((piece, index) => {
+                    const pieceTypes = ['queen', 'rook', 'bishop', 'knight'];
+                    piece.className = `piece-${color === 'w' ? 'white' : 'black'}-${pieceTypes[index]} w-full h-12 bg-contain bg-center bg-no-repeat`;
+                });
+                
+                modal.classList.remove('hidden');
+            }
+
+            hidePromotionModal() {
+                this.promotionModal.classList.add('hidden');
+                this.pendingPromotion = null;
+            }
+
+            makeBotMove() {
+                if (this.chess.game_over()) return;
+
+                const moves = this.chess.moves();
+                if (moves.length === 0) return;
+
+                // Simple bot: random move with some basic evaluation
+                let bestMove = null;
+                let bestScore = -Infinity;
+
+                for (let i = 0; i < Math.min(moves.length, this.botDifficulty * 10); i++) {
+                    const move = moves[Math.floor(Math.random() * moves.length)];
+                    this.chess.move(move);
+                    
+                    const score = this.evaluatePosition();
+                    
+                    this.chess.undo();
+                    
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestMove = move;
+                    }
+                }
+
+                if (bestMove) {
+                    this.chess.move(bestMove);
+                    // console.log('Bot move successful, playing sound...');
+                    this.playMoveSound();
+                    this.renderBoard();
+                    this.updateGameStatus();
+                    this.saveGameState();
+                    
+                    if (this.chess.game_over()) {
+                        this.handleGameOver();
+                    }
+                }
+            }
+
+            evaluatePosition() {
+                let score = 0;
+                const pieceValues = {
+                    'p': 1,   // pawn
+                    'n': 3,   // knight
+                    'b': 3,   // bishop
+                    'r': 5,   // rook
+                    'q': 9,   // queen
+                    'k': 0    // king (not counted in material)
+                };
+
+                for (let i = 0; i < 8; i++) {
+                    for (let j = 0; j < 8; j++) {
+                        const square = String.fromCharCode(97 + j) + (8 - i);
+                        const piece = this.chess.get(square);
+                        
+                        if (piece) {
+                            const value = pieceValues[piece.type] || 0;
+                            score += piece.color === 'b' ? value : -value;
+                        }
+                    }
+                }
+
+                return score;
+            }
+
+            updateGameStatus() {
+                const checkInfo = document.getElementById('checkInfo');
+                const lastMove = document.getElementById('lastMove');
+                
+                if (this.chess.in_checkmate()) {
+                    this.gameStatus.textContent = `Checkmate! ${this.chess.turn() === 'w' ? 'Black' : 'White'} wins!`;
+                    this.gameStatus.className = 'text-red-400 font-medium';
+                    checkInfo.classList.add('hidden');
+                } else if (this.chess.in_draw()) {
+                    this.gameStatus.textContent = 'Draw!';
+                    this.gameStatus.className = 'text-yellow-400 font-medium';
+                    checkInfo.classList.add('hidden');
+                } else if (this.chess.in_check()) {
+                    this.gameStatus.textContent = `${this.chess.turn() === 'w' ? 'White' : 'Black'}'s Turn (Check!)`;
+                    this.gameStatus.className = 'text-orange-400 font-medium';
+                    checkInfo.classList.remove('hidden');
+                } else {
+                    this.gameStatus.textContent = `${this.chess.turn() === 'w' ? 'White' : 'Black'}'s Turn`;
+                    this.gameStatus.className = this.chess.turn() === 'w' ? 'text-white font-medium' : 'text-gray-800 font-medium';
+                    checkInfo.classList.add('hidden');
+                }
+                
+                // Update last move
+                const history = this.chess.history();
+                if (history.length > 0) {
+                    lastMove.textContent = history[history.length - 1];
+                } else {
+                    lastMove.textContent = '-';
+                }
+            }
+
+            handleGameOver() {
+                if (this.chess.in_checkmate()) {
+                    this.gameStatus.textContent = `Checkmate! ${this.chess.turn() === 'w' ? 'Black' : 'White'} wins!`;
+                    this.gameStatus.className = 'text-red-400 font-medium';
+                    
+                    // Show PGN modal after a short delay
+                    setTimeout(() => {
+                        this.showPGNModal();
+                    }, 1000);
+                } else if (this.chess.in_draw()) {
+                    this.gameStatus.textContent = 'Draw!';
+                    this.gameStatus.className = 'text-yellow-400 font-medium';
+                }
+            }
+
+            setupEventListeners() {
+                const boardContainer = document.querySelector('.grid');
+                
+                // Prevent right-click context menu
+                boardContainer.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                });
+                
+                boardContainer.addEventListener('click', (e) => {
+                    const square = e.target.closest('.chess-square');
+                    if (!square) return;
+
+                    const squareName = square.dataset.square;
+                    const piece = this.chess.get(squareName);
+
+                    // Clear previous selections
+                    document.querySelectorAll('.chess-square').forEach(sq => {
+                        sq.classList.remove('selected', 'valid-move');
+                    });
+
+                    if (this.selectedPiece) {
+                        const fromSquare = this.selectedPiece;
+                        
+                        // Check if it's a valid move
+                        const validMoves = this.getValidMoves(fromSquare);
+                        const isValidMove = validMoves.some(move => move.to === squareName);
+                        
+                        if (isValidMove) {
+                            // Check for pawn promotion
+                            if (this.handlePawnPromotion(fromSquare, squareName)) {
+                                // Promotion modal will handle the move
+                                return;
+                            }
+                            
+                            this.makeMove(fromSquare, squareName);
+                            this.selectedPiece = null;
+                        } else if (piece && piece.color === this.chess.turn()) {
+                            this.selectedPiece = squareName;
+                            square.classList.add('selected');
+                            this.showValidMoves(squareName);
+                        } else {
+                            this.selectedPiece = null;
+                        }
+                    } else if (piece && piece.color === this.chess.turn()) {
+                        this.selectedPiece = squareName;
+                        square.classList.add('selected');
+                        this.showValidMoves(squareName);
+                    }
+                });
+
+                this.resetBtn.addEventListener('click', () => {
+                    this.resetGame();
+                });
+
+                this.gameModeSelect.addEventListener('change', (e) => {
+                    this.gameMode = e.target.value;
+                    this.botControls.classList.toggle('hidden', this.gameMode !== 'bot');
+                    this.botInfo.classList.toggle('hidden', this.gameMode !== 'bot');
+                    
+                    // Reset the game when game mode changes
+                    this.chess = new Chess();
+                    this.selectedPiece = null;
+                    this.renderBoard();
+                    this.updateGameStatus();
+                    this.saveGameState();
+                });
+
+                this.botDifficultySelect.addEventListener('change', (e) => {
+                    this.botDifficulty = parseInt(e.target.value);
+                    this.saveGameState();
+                });
+
+                // Promotion modal event listeners
+                this.promotionModal.addEventListener('click', (e) => {
+                    const promotionButton = e.target.closest('.promotion-piece');
+                    if (promotionButton) {
+                        const promotionPiece = promotionButton.dataset.piece;
+                        // console.log('Promotion piece selected:', promotionPiece);
+                        if (this.pendingPromotion) {
+                            this.makeMove(this.pendingPromotion.from, this.pendingPromotion.to, promotionPiece);
+                            this.hidePromotionModal();
+                            this.selectedPiece = null;
+                        }
+                    } else if (e.target === this.promotionModal) {
+                        // Click outside modal to cancel
+                        this.hidePromotionModal();
+                        this.selectedPiece = null;
+                    }
+                });
+
+                // PGN modal event listeners
+                this.copyPgnBtn.addEventListener('click', () => {
+                    const pgn = this.getGamePGN();
+                    navigator.clipboard.writeText(pgn).then(() => {
+                        this.copyPgnBtn.textContent = 'Copied!';
+                        setTimeout(() => {
+                            this.copyPgnBtn.textContent = 'Copy PGN';
+                        }, 2000);
+                    }).catch(err => {
+                        console.error('Failed to copy PGN:', err);
+                    });
+                });
+
+                this.closePgnBtn.addEventListener('click', () => {
+                    this.hidePGNModal();
+                });
+
+                // Close PGN modal when clicking outside
+                this.pgnModal.addEventListener('click', (e) => {
+                    if (e.target === this.pgnModal) {
+                        this.hidePGNModal();
+                    }
+                });
+            }
+
+            showValidMoves(square) {
+                const validMoves = this.getValidMoves(square);
+                validMoves.forEach(move => {
+                    const squareElement = document.querySelector(`[data-square="${move.to}"]`);
+                    if (squareElement) {
+                        squareElement.classList.add('valid-move');
+                    }
+                });
+            }
+
+            resetGame() {
+                this.chess = new Chess();
+                this.selectedPiece = null;
+                this.renderBoard();
+                this.updateGameStatus();
+                this.saveGameState();
+            }
+
+            playMoveSound() {
+                // console.log('Attempting to play move sound...');
+                try {
+                    // Create audio context
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    // console.log('Audio context created:', audioContext);
+                    
+                    // Create oscillator for beep sound
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    // console.log('Audio nodes created');
+                    
+                    // Connect nodes
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    // console.log('Audio nodes connected');
+                    
+                    // Configure sound
+                    oscillator.frequency.setValueAtTime(800, audioContext.currentTime); // 800Hz beep
+                    oscillator.type = 'sine';
+                    
+                    // Configure volume
+                    gainNode.gain.setValueAtTime(0.1, audioContext.currentTime); // Low volume
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+                    
+                    // Play sound
+                    oscillator.start(audioContext.currentTime);
+                    oscillator.stop(audioContext.currentTime + 0.1); // 100ms duration
+                    // console.log('Move sound played successfully');
+                    
+                } catch (error) {
+                    // console.error('Audio play failed:', error);
+                }
+            }
+
+            getGamePGN() {
+                return this.chess.pgn();
+            }
+
+            showPGNModal() {
+                const pgn = this.getGamePGN();
+                this.pgnText.textContent = pgn;
+                this.pgnModal.classList.remove('hidden');
+            }
+
+            hidePGNModal() {
+                this.pgnModal.classList.add('hidden');
+            }
+        }
+
+        // Initialize the game when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new ChessGame();
+        });
+    </script>
+</body>
+</html> 
