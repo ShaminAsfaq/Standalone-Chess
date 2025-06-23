@@ -103,6 +103,17 @@
             animation: fadeIn 0.6s ease-out;
         }
 
+        /* Disabled button styling */
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        button:disabled:hover {
+            transform: none !important;
+        }
+
         /* Chess.com Individual Piece URLs */
         .piece-white-king { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wk.png'); }
         .piece-white-queen { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wq.png'); }
@@ -174,9 +185,14 @@
                     </div>
                     
                     <div class="pt-4 border-t border-gray-600">
-                        <button id="resetBtn" class="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium py-3 px-4 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg">
-                            Reset Game
-                        </button>
+                        <div class="space-y-3">
+                            <button id="resetBtn" class="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium py-3 px-4 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg">
+                                Reset Game
+                            </button>
+                            <button id="drawBtn" class="w-full bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700 text-white font-medium py-3 px-4 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hidden">
+                                Offer Draw
+                            </button>
+                        </div>
                     </div>
                     
                     <div class="text-xs text-gray-400 text-center">
@@ -260,6 +276,7 @@
                 this.botDifficulty = 3;
                 this.gameStatus = document.getElementById('gameStatus');
                 this.resetBtn = document.getElementById('resetBtn');
+                this.drawBtn = document.getElementById('drawBtn');
                 this.gameModeSelect = document.getElementById('gameMode');
                 this.botDifficultySelect = document.getElementById('botDifficulty');
                 this.botControls = document.getElementById('botControls');
@@ -330,6 +347,18 @@
                 this.botDifficultySelect.value = this.botDifficulty;
                 this.botControls.classList.toggle('hidden', this.gameMode !== 'bot');
                 this.botInfo.classList.toggle('hidden', this.gameMode !== 'bot');
+                // Show draw button when playing against bot, but disable it if game hasn't started or is over
+                this.drawBtn.classList.toggle('hidden', this.gameMode !== 'bot');
+                
+                const shouldDisable = this.gameMode !== 'bot' || this.chess.game_over() || this.chess.history().length === 0;
+                console.log('Draw button state check:', {
+                    gameMode: this.gameMode,
+                    gameOver: this.chess.game_over(),
+                    historyLength: this.chess.history().length,
+                    shouldDisable: shouldDisable
+                });
+                
+                this.drawBtn.disabled = shouldDisable;
             }
 
             getPieceSymbol(piece) {
@@ -437,13 +466,8 @@
                     this.renderBoard();
                     this.updateGameStatus();
                     this.saveGameState();
+                    this.syncUIWithGameState();
                     
-                    // Check if game is over
-                    if (this.chess.game_over()) {
-                        this.handleGameOver();
-                        return;
-                    }
-
                     // Bot's turn
                     if (this.gameMode === 'bot' && this.chess.turn() === 'b') {
                         setTimeout(() => this.makeBotMove(), 500);
@@ -526,10 +550,7 @@
                     this.renderBoard();
                     this.updateGameStatus();
                     this.saveGameState();
-                    
-                    if (this.chess.game_over()) {
-                        this.handleGameOver();
-                    }
+                    this.syncUIWithGameState();
                 }
             }
 
@@ -563,14 +584,28 @@
                 const checkInfo = document.getElementById('checkInfo');
                 const lastMove = document.getElementById('lastMove');
                 
+                console.log('updateGameStatus called');
+                console.log('Game over:', this.chess.game_over());
+                console.log('In checkmate:', this.chess.in_checkmate());
+                console.log('In draw:', this.chess.in_draw());
+                console.log('In stalemate:', this.chess.in_stalemate());
+                
                 if (this.chess.in_checkmate()) {
+                    console.log('Checkmate detected');
                     this.gameStatus.textContent = `Checkmate! ${this.chess.turn() === 'w' ? 'Black' : 'White'} wins!`;
                     this.gameStatus.className = 'text-red-400 font-medium';
                     checkInfo.classList.add('hidden');
+                    this.syncUIWithGameState(); // Update draw button state
+                    // Call handleGameOver to show PGN modal
+                    setTimeout(() => this.handleGameOver(), 100);
                 } else if (this.chess.in_draw()) {
+                    console.log('Draw detected');
                     this.gameStatus.textContent = 'Draw!';
                     this.gameStatus.className = 'text-yellow-400 font-medium';
                     checkInfo.classList.add('hidden');
+                    this.syncUIWithGameState(); // Update draw button state
+                    // Call handleGameOver to show PGN modal
+                    setTimeout(() => this.handleGameOver(), 100);
                 } else if (this.chess.in_check()) {
                     this.gameStatus.textContent = `${this.chess.turn() === 'w' ? 'White' : 'Black'}'s Turn (Check!)`;
                     this.gameStatus.className = 'text-orange-400 font-medium';
@@ -591,17 +626,15 @@
             }
 
             handleGameOver() {
-                if (this.chess.in_checkmate()) {
-                    this.gameStatus.textContent = `Checkmate! ${this.chess.turn() === 'w' ? 'Black' : 'White'} wins!`;
-                    this.gameStatus.className = 'text-red-400 font-medium';
-                    
-                    // Show PGN modal after a short delay
+                console.log('handleGameOver called');
+                // Only show PGN modal if there are moves in the game
+                if (this.chess.history().length > 0) {
                     setTimeout(() => {
+                        console.log('Showing PGN modal');
                         this.showPGNModal();
                     }, 1000);
-                } else if (this.chess.in_draw()) {
-                    this.gameStatus.textContent = 'Draw!';
-                    this.gameStatus.className = 'text-yellow-400 font-medium';
+                } else {
+                    console.log('No moves made, skipping PGN modal');
                 }
             }
 
@@ -659,10 +692,16 @@
                     this.resetGame();
                 });
 
+                this.drawBtn.addEventListener('click', () => {
+                    this.offerDraw();
+                });
+
                 this.gameModeSelect.addEventListener('change', (e) => {
                     this.gameMode = e.target.value;
                     this.botControls.classList.toggle('hidden', this.gameMode !== 'bot');
                     this.botInfo.classList.toggle('hidden', this.gameMode !== 'bot');
+                    this.drawBtn.classList.toggle('hidden', this.gameMode !== 'bot');
+                    this.drawBtn.disabled = this.gameMode !== 'bot' || this.chess.game_over() || this.chess.history().length === 0;
                     
                     // Reset the game when game mode changes
                     this.chess = new Chess();
@@ -736,6 +775,39 @@
                 this.renderBoard();
                 this.updateGameStatus();
                 this.saveGameState();
+                this.syncUIWithGameState();
+            }
+
+            offerDraw() {
+                // Only allow draw offers when it's the human's turn (white) and playing against bot
+                if (this.gameMode === 'bot' && this.chess.turn() === 'w' && !this.chess.game_over()) {
+                    // Simple bot logic: accept draw with 50% probability
+                    const botAccepts = Math.random() < 0.5;
+                    
+                    if (botAccepts) {
+                        // Bot accepts the draw - add draw result to the game
+                        this.chess.header('Result', '1/2-1/2');
+                        this.gameStatus.textContent = 'Draw by agreement!';
+                        this.gameStatus.className = 'text-yellow-400 font-medium';
+                        this.syncUIWithGameState(); // Update draw button state
+                        
+                        // Show PGN modal only if there are moves in the game
+                        if (this.chess.history().length > 0) {
+                            setTimeout(() => {
+                                this.showPGNModal();
+                            }, 1000);
+                        }
+                    } else {
+                        // Bot declines the draw
+                        this.gameStatus.textContent = 'Bot declined the draw offer';
+                        this.gameStatus.className = 'text-orange-400 font-medium';
+                        
+                        // Reset status after 3 seconds
+                        setTimeout(() => {
+                            this.updateGameStatus();
+                        }, 3000);
+                    }
+                }
             }
 
             playMoveSound() {
@@ -778,9 +850,12 @@
             }
 
             showPGNModal() {
+                console.log('showPGNModal called');
                 const pgn = this.getGamePGN();
+                console.log('PGN:', pgn);
                 this.pgnText.textContent = pgn;
                 this.pgnModal.classList.remove('hidden');
+                console.log('PGN modal should be visible now');
             }
 
             hidePGNModal() {
