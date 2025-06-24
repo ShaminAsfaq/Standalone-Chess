@@ -114,6 +114,62 @@
             transform: none !important;
         }
 
+        /* Board annotations */
+        .board-annotations {
+            position: relative;
+            display: inline-block;
+        }
+
+        .file-labels {
+            position: absolute;
+            bottom: -30px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-around;
+            font-size: 14px;
+            font-weight: 600;
+            color: #e5e7eb;
+        }
+
+        .rank-labels {
+            position: absolute;
+            top: 0;
+            left: -30px;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            font-size: 14px;
+            font-weight: 600;
+            color: #e5e7eb;
+        }
+
+        .file-label, .rank-label {
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Board flipping */
+        .board-flipped {
+            transform: rotate(180deg);
+        }
+
+        .board-flipped .chess-square {
+            transform: rotate(180deg);
+        }
+
+        .board-flipped .file-labels {
+            transform: rotate(180deg);
+        }
+
+        .board-flipped .rank-labels {
+            transform: rotate(180deg);
+        }
+
         /* Chess.com Individual Piece URLs */
         .piece-white-king { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wk.png'); }
         .piece-white-queen { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wq.png'); }
@@ -135,9 +191,31 @@
         <!-- Game Container -->
         <div class="flex flex-col lg:flex-row gap-6 items-center lg:items-start">
             <!-- Chess Board -->
-            <div class="glass-effect rounded-2xl p-3">
-                <div class="grid grid-cols-8 w-96 h-96 lg:w-[34rem] lg:h-[34rem] xl:w-[38rem] xl:h-[38rem] 2xl:w-[42rem] 2xl:h-[42rem] rounded-xl overflow-hidden shadow-2xl">
-                    <!-- Chess squares will be generated here -->
+            <div class="glass-effect rounded-2xl p-6">
+                <div class="board-annotations">
+                    <div class="rank-labels">
+                        <div class="rank-label">8</div>
+                        <div class="rank-label">7</div>
+                        <div class="rank-label">6</div>
+                        <div class="rank-label">5</div>
+                        <div class="rank-label">4</div>
+                        <div class="rank-label">3</div>
+                        <div class="rank-label">2</div>
+                        <div class="rank-label">1</div>
+                    </div>
+                    <div class="grid grid-cols-8 w-96 h-96 lg:w-[34rem] lg:h-[34rem] xl:w-[38rem] xl:h-[38rem] 2xl:w-[42rem] 2xl:h-[42rem] rounded-xl overflow-hidden shadow-2xl">
+                        <!-- Chess squares will be generated here -->
+                    </div>
+                    <div class="file-labels">
+                        <div class="file-label">a</div>
+                        <div class="file-label">b</div>
+                        <div class="file-label">c</div>
+                        <div class="file-label">d</div>
+                        <div class="file-label">e</div>
+                        <div class="file-label">f</div>
+                        <div class="file-label">g</div>
+                        <div class="file-label">h</div>
+                    </div>
                 </div>
             </div>
 
@@ -170,7 +248,15 @@
                                 <label class="block text-sm font-medium text-gray-300 mb-2">Game Mode</label>
                                 <select id="gameMode" class="w-full bg-gray-800 text-white rounded-lg px-3 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none">
                                     <option value="human">Human vs Human</option>
-                                    <option value="bot">Human vs Bot</option>
+                                    <option value="bot" selected>Human vs Bot</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Your Color</label>
+                                <select id="playerColor" class="w-full bg-gray-800 text-white rounded-lg px-3 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none">
+                                    <option value="random" selected>Random</option>
+                                    <option value="white">White</option>
+                                    <option value="black">Black</option>
                                 </select>
                             </div>
                             <div id="botControls" class="hidden">
@@ -186,9 +272,14 @@
                     
                     <div class="pt-4 border-t border-gray-600">
                         <div class="space-y-3">
-                            <button id="resetBtn" class="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium py-3 px-4 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg">
-                                Reset Game
-                            </button>
+                            <div class="grid grid-cols-2 gap-3">
+                                <button id="surrenderBtn" class="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium py-3 px-4 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg">
+                                    Surrender
+                                </button>
+                                <button id="restartBtn" class="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-medium py-3 px-4 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg">
+                                    Restart
+                                </button>
+                            </div>
                             <button id="drawBtn" class="w-full bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700 text-white font-medium py-3 px-4 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hidden">
                                 Offer Draw
                             </button>
@@ -267,18 +358,17 @@
         class ChessGame {
             constructor() {
                 this.chess = new Chess();
-                // console.log('Chess object:', this.chess);
-                // console.log('Chess board:', this.chess.board());
-                // console.log('Chess fen:', this.chess.fen());
-                // console.log('Is chess.js working?', typeof this.chess.get === 'function');
                 this.selectedPiece = null;
-                this.gameMode = 'human';
+                this.gameMode = 'bot';
                 this.botDifficulty = 3;
+                this.playerColor = 'random';
                 this.gameStatus = document.getElementById('gameStatus');
-                this.resetBtn = document.getElementById('resetBtn');
+                this.surrenderBtn = document.getElementById('surrenderBtn');
+                this.restartBtn = document.getElementById('restartBtn');
                 this.drawBtn = document.getElementById('drawBtn');
                 this.gameModeSelect = document.getElementById('gameMode');
                 this.botDifficultySelect = document.getElementById('botDifficulty');
+                this.playerColorSelect = document.getElementById('playerColor');
                 this.botControls = document.getElementById('botControls');
                 this.botInfo = document.getElementById('botInfo');
                 this.promotionModal = document.getElementById('promotionModal');
@@ -290,9 +380,31 @@
                 
                 this.loadGameState();
                 this.setupEventListeners();
-                this.syncUIWithGameState();
                 this.renderBoard();
                 this.updateGameStatus();
+                this.syncUIWithGameState();
+                
+                // Only initialize if no game was loaded (fresh start)
+                if (!localStorage.getItem('chessGameState')) {
+                    this.initializeGame();
+                }
+            }
+
+            initializeGame() {
+                // Ensure player color is determined if random and not already determined
+                if (this.playerColor === 'random' && !this._determinedColor) {
+                    this._determinedColor = Math.random() < 0.5 ? 'w' : 'b';
+                    console.log('Player color determined:', this._determinedColor === 'w' ? 'White' : 'Black');
+                    this.saveGameState(); // Save the determined color immediately
+                }
+                
+                // For fresh games: if playing against bot and player is black, bot should move first
+                if (this.gameMode === 'bot' && this.getPlayerColor() === 'b') {
+                    console.log('Fresh game: Player is black, bot moves first');
+                    setTimeout(() => this.makeBotMove(), 500);
+                } else {
+                    console.log('Fresh game: Player is white or not bot mode');
+                }
             }
 
             saveGameState() {
@@ -300,6 +412,8 @@
                     fen: this.chess.fen(),
                     gameMode: this.gameMode,
                     botDifficulty: this.botDifficulty,
+                    playerColor: this.playerColor,
+                    determinedColor: this._determinedColor,
                     timestamp: Date.now()
                 };
                 localStorage.setItem('chessGameState', JSON.stringify(gameState));
@@ -323,21 +437,33 @@
                             this.gameModeSelect.value = this.gameMode;
                             this.botControls.classList.toggle('hidden', this.gameMode !== 'bot');
                             this.botInfo.classList.toggle('hidden', this.gameMode !== 'bot');
-                            // console.log('Game mode loaded:', this.gameMode);
                         }
                         
                         // Load bot difficulty
                         if (gameState.botDifficulty) {
                             this.botDifficulty = gameState.botDifficulty;
                             this.botDifficultySelect.value = this.botDifficulty;
-                            // console.log('Bot difficulty loaded:', this.botDifficulty);
                         }
                         
-                        // console.log('Game state loaded from localStorage');
+                        // Load player color
+                        if (gameState.playerColor) {
+                            this.playerColor = gameState.playerColor;
+                            // Update UI elements
+                            document.getElementById('playerColor').value = this.playerColor;
+                        }
+                        
+                        // Load determined color
+                        if (gameState.determinedColor) {
+                            this._determinedColor = gameState.determinedColor;
+                        }
                     } catch (error) {
-                        // console.error('Error loading game state:', error);
                         localStorage.removeItem('chessGameState');
                     }
+                }
+                
+                // After loading game state, check if bot should move
+                if (this.gameMode === 'bot' && !this.isPlayerTurn() && !this.chess.game_over()) {
+                    setTimeout(() => this.makeBotMove(), 500);
                 }
             }
 
@@ -345,20 +471,22 @@
                 // Ensure UI reflects current game state
                 this.gameModeSelect.value = this.gameMode;
                 this.botDifficultySelect.value = this.botDifficulty;
+                this.playerColorSelect.value = this.playerColor;
                 this.botControls.classList.toggle('hidden', this.gameMode !== 'bot');
                 this.botInfo.classList.toggle('hidden', this.gameMode !== 'bot');
                 // Show draw button when playing against bot, but disable it if game hasn't started or is over
                 this.drawBtn.classList.toggle('hidden', this.gameMode !== 'bot');
                 
                 const shouldDisable = this.gameMode !== 'bot' || this.chess.game_over() || this.chess.history().length === 0;
-                console.log('Draw button state check:', {
-                    gameMode: this.gameMode,
-                    gameOver: this.chess.game_over(),
-                    historyLength: this.chess.history().length,
-                    shouldDisable: shouldDisable
-                });
-                
                 this.drawBtn.disabled = shouldDisable;
+                
+                // Handle surrender and restart button states
+                const gameInProgress = !this.chess.game_over() && this.chess.history().length > 0;
+                this.surrenderBtn.disabled = !gameInProgress;
+                this.restartBtn.disabled = gameInProgress;
+                
+                // Re-render board to update flipping
+                this.renderBoard();
             }
 
             getPieceSymbol(piece) {
@@ -417,7 +545,15 @@
 
             renderBoard() {
                 const boardContainer = document.querySelector('.grid');
+                const boardAnnotations = document.querySelector('.board-annotations');
                 boardContainer.innerHTML = '';
+
+                // Apply board flipping
+                if (this.shouldFlipBoard()) {
+                    boardAnnotations.classList.add('board-flipped');
+                } else {
+                    boardAnnotations.classList.remove('board-flipped');
+                }
 
                 for (let row = 0; row < 8; row++) {
                     for (let col = 0; col < 8; col++) {
@@ -469,7 +605,7 @@
                     this.syncUIWithGameState();
                     
                     // Bot's turn
-                    if (this.gameMode === 'bot' && this.chess.turn() === 'b') {
+                    if (this.gameMode === 'bot' && !this.isPlayerTurn()) {
                         setTimeout(() => this.makeBotMove(), 500);
                     }
                 }
@@ -517,6 +653,38 @@
             hidePromotionModal() {
                 this.promotionModal.classList.add('hidden');
                 this.pendingPromotion = null;
+            }
+
+            getPlayerColor() {
+                if (this.playerColor === 'random') {
+                    // If we haven't determined the random color yet, set it
+                    if (!this._determinedColor) {
+                        this._determinedColor = Math.random() < 0.5 ? 'w' : 'b';
+                    }
+                    return this._determinedColor;
+                }
+                return this.playerColor === 'white' ? 'w' : 'b';
+            }
+
+            isPlayerTurn() {
+                const currentTurn = this.chess.turn();
+                const playerColor = this.getPlayerColor();
+                const isPlayerTurn = currentTurn === playerColor;
+                
+                // Debug logging
+                console.log('Turn check:', {
+                    currentTurn: currentTurn,
+                    playerColor: playerColor,
+                    isPlayerTurn: isPlayerTurn,
+                    gameMode: this.gameMode,
+                    determinedColor: this._determinedColor
+                });
+                
+                return isPlayerTurn;
+            }
+
+            shouldFlipBoard() {
+                return this.getPlayerColor() === 'b';
             }
 
             makeBotMove() {
@@ -653,6 +821,9 @@
                     const squareName = square.dataset.square;
                     const piece = this.chess.get(squareName);
 
+                    // Only allow moves on player's turn
+                    if (!this.isPlayerTurn()) return;
+
                     // Clear previous selections
                     document.querySelectorAll('.chess-square').forEach(sq => {
                         sq.classList.remove('selected', 'valid-move');
@@ -688,8 +859,12 @@
                     }
                 });
 
-                this.resetBtn.addEventListener('click', () => {
-                    this.resetGame();
+                this.surrenderBtn.addEventListener('click', () => {
+                    this.surrenderGame();
+                });
+
+                this.restartBtn.addEventListener('click', () => {
+                    this.restartGame();
                 });
 
                 this.drawBtn.addEventListener('click', () => {
@@ -698,6 +873,7 @@
 
                 this.gameModeSelect.addEventListener('change', (e) => {
                     this.gameMode = e.target.value;
+                    this._determinedColor = null; // Reset determined color
                     this.botControls.classList.toggle('hidden', this.gameMode !== 'bot');
                     this.botInfo.classList.toggle('hidden', this.gameMode !== 'bot');
                     this.drawBtn.classList.toggle('hidden', this.gameMode !== 'bot');
@@ -714,6 +890,18 @@
                 this.botDifficultySelect.addEventListener('change', (e) => {
                     this.botDifficulty = parseInt(e.target.value);
                     this.saveGameState();
+                });
+
+                this.playerColorSelect.addEventListener('change', (e) => {
+                    this.playerColor = e.target.value;
+                    this._determinedColor = null; // Reset determined color
+                    this.saveGameState();
+                    // Reset the game when color changes
+                    this.chess = new Chess();
+                    this.selectedPiece = null;
+                    this.renderBoard();
+                    this.updateGameStatus();
+                    this.syncUIWithGameState();
                 });
 
                 // Promotion modal event listeners
@@ -772,15 +960,20 @@
             resetGame() {
                 this.chess = new Chess();
                 this.selectedPiece = null;
+                this._determinedColor = null; // Reset determined color
                 this.renderBoard();
                 this.updateGameStatus();
-                this.saveGameState();
-                this.syncUIWithGameState();
+                
+                // Clear localStorage for a fresh start
+                localStorage.removeItem('chessGameState');
+                
+                // Initialize fresh game
+                this.initializeGame();
             }
 
             offerDraw() {
-                // Only allow draw offers when it's the human's turn (white) and playing against bot
-                if (this.gameMode === 'bot' && this.chess.turn() === 'w' && !this.chess.game_over()) {
+                // Only allow draw offers when it's the human's turn and playing against bot
+                if (this.gameMode === 'bot' && this.isPlayerTurn() && !this.chess.game_over()) {
                     // Simple bot logic: accept draw with 50% probability
                     const botAccepts = Math.random() < 0.5;
                     
@@ -861,11 +1054,47 @@
             hidePGNModal() {
                 this.pgnModal.classList.add('hidden');
             }
+
+            surrenderGame() {
+                if (this.chess.game_over() || this.chess.history().length === 0) return;
+                
+                // Determine winner based on current turn
+                const winner = this.chess.turn() === 'w' ? 'Black' : 'White';
+                this.gameStatus.textContent = `${winner} wins by resignation!`;
+                this.gameStatus.className = 'text-red-400 font-medium';
+                
+                // Add resignation result to the game
+                this.chess.header('Result', winner === 'White' ? '1-0' : '0-1');
+                
+                this.syncUIWithGameState();
+                
+                // Show PGN modal after a short delay
+                setTimeout(() => {
+                    this.showPGNModal();
+                }, 1000);
+            }
+
+            restartGame() {
+                this.chess = new Chess();
+                this.selectedPiece = null;
+                this._determinedColor = null; // Reset determined color
+                this.renderBoard();
+                this.updateGameStatus();
+                
+                // Clear localStorage for a fresh start
+                localStorage.removeItem('chessGameState');
+                
+                // Initialize fresh game
+                this.initializeGame();
+            }
         }
 
         // Initialize the game when the page loads
         document.addEventListener('DOMContentLoaded', () => {
-            new ChessGame();
+            // Add a small delay to ensure all elements are properly loaded
+            setTimeout(() => {
+                new ChessGame();
+            }, 100);
         });
     </script>
 </body>
